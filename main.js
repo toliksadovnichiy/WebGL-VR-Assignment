@@ -18,6 +18,8 @@ const n = parseInt(300);
 const uDel = 0.001;
 const vDel = 0.001;
 
+let orientationEvent = { alpha: 0, beta: 0, gamma: 0 };
+
 let camera,
     texture,
     webCamText,
@@ -213,6 +215,7 @@ function draw() {
     // Enable the depth buffer
     gl.enable(gl.DEPTH_TEST);
 
+    let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0);
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI / 4, 1, 4, 12);
 
@@ -223,8 +226,25 @@ function draw() {
     let translateToPointZero = m4.translation(0, 0, -10);
     let translateToPointZero2 = m4.translation(-5, -5, -10);
 
-    let matAccum1 = m4.multiply(translateToPointZero, modelView);
-    let matAccum12 = m4.multiply(translateToPointZero2, modelView2);
+    if (
+        orientationEvent.alpha &&
+        orientationEvent.beta &&
+        orientationEvent.gamma
+    ) {
+        let rotationMatrix = getRotationMatrix(
+            orientationEvent.alpha,
+            orientationEvent.beta,
+            orientationEvent.gamma
+        );
+        let translationMatrix = m4.translation(0, 0, -1);
+
+        modelView = m4.multiply(rotationMatrix, translationMatrix);
+    }
+
+    let matAccum = m4.multiply(rotateToPointZero, modelView);
+
+    let matAccum1 = m4.multiply(translateToPointZero, matAccum);
+    let matAccum12 = m4.multiply(translateToPointZero2, matAccum);
 
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, projection);
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, m4.multiply(matAccum12, m4.scaling(10, 10, 1)));
@@ -242,25 +262,54 @@ function draw() {
         video
     );
     surface2.Draw();
+
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
+
     camera.ApplyLeftFrustum()
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, camera.mProjectionMatrix);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.colorMask(false, true, true, false);
     surface.Draw();
+
     gl.clear(gl.DEPTH_BUFFER_BIT);
+
     camera.ApplyRightFrustum()
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, camera.mProjectionMatrix);
     gl.colorMask(true, false, false, false);
     surface.Draw();
     gl.colorMask(true, true, true, true);
-
-
 }
+
 function draw2() {
     draw();
     window.requestAnimationFrame(draw2);
+}
 
+function getRotationMatrix(alpha, beta, gamma) {
+    var _x = beta ? deg2rad(beta) : 0;
+    var _y = gamma ? deg2rad(gamma) : 0;
+    var _z = alpha ? deg2rad(alpha) : 0;
+  
+    var cX = Math.cos(_x);
+    var cY = Math.cos(_y);
+    var cZ = Math.cos(_z);
+    var sX = Math.sin(_x);
+    var sY = Math.sin(_y);
+    var sZ = Math.sin(_z);
+  
+    var m11 = cZ * cY - sZ * sX * sY;
+    var m12 = -cX * sZ;
+    var m13 = cY * sZ * sX + cZ * sY;
+  
+    var m21 = cY * sZ + cZ * sX * sY;
+    var m22 = cZ * cX;
+    var m23 = sZ * sY - cZ * cY * sX;
+  
+    var m31 = -cX * sY;
+    var m32 = sX;
+    var m33 = cX * cY;
+  
+    return [m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, 0, 0, 0, 1];
 }
 
 //Creating data as vertices for surface
@@ -470,6 +519,12 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
+    if ("DeviceOrientationEvent" in window) {
+        window.addEventListener("deviceorientation", handleOrientation);
+    } else {
+        console.log("Device orientation not supported");
+    }
+
     draw2();
     LoadTexture();
 }
@@ -495,3 +550,9 @@ function LoadTexture() {
         draw();
     });
 }
+
+const handleOrientation = (event) => {
+    orientationEvent.alpha = event.alpha;
+    orientationEvent.beta = event.beta;
+    orientationEvent.gamma = event.gamma;
+};
