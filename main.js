@@ -28,6 +28,17 @@ let camera,
     track,
     surface2;
 
+let sphere, sphereTex;
+let audio = null;
+let audioContext; 
+let audioSource; 
+let audioPanner; 
+let audioFilter;
+
+let xPos = 0;
+let yPos = 0;
+let zPos = 0;
+
 function deg2rad(angle) {
     return (angle * Math.PI) / 180;
 }
@@ -218,6 +229,7 @@ function draw() {
     let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0);
     /* Set the values of the projection transformation */
     let projection = m4.perspective(Math.PI / 4, 1, 4, 12);
+    let projectionS = m4.orthographic(0, 1, 0, 1, -1, 1);
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
@@ -225,6 +237,15 @@ function draw() {
 
     let translateToPointZero = m4.translation(0, 0, -10);
     let translateToPointZero2 = m4.translation(-5, -5, -10);
+    let translateToPointZeroS = m4.translation(0.0, 0, 0);
+
+    let modelView1 = null;
+
+    gl.bindTexture(gl.TEXTURE_2D, sphereTex);
+
+    xPos = parseFloat(document.getElementById("xPosition").value);
+    yPos = parseFloat(document.getElementById("yPosition").value);
+    zPos = parseFloat(document.getElementById("zPosition").value);
 
     if (
         orientationEvent.alpha &&
@@ -238,8 +259,35 @@ function draw() {
         );
         let translationMatrix = m4.translation(0, 0, -1);
 
+        xPos = orientationEvent.gamma;
+        yPos = orientationEvent.beta;
+
         modelView = m4.multiply(rotationMatrix, translationMatrix);
     }
+
+    if (audioPanner) {
+        audioPanner.setPosition(
+            xPos,
+            yPos,
+            zPos
+        );
+    }
+
+    const translationMatrix = m4.translation(xPos, yPos, zPos);
+    const scaleMatrix = m4.scaling(0.01, 0.01, 0.01); 
+
+    let matAccumS = m4.multiply(rotateToPointZero, modelView);
+    let matAccumTranslationS = m4.multiply(translationMatrix, matAccumS);
+    let matAccumZeroS = m4.multiply(translateToPointZeroS, matAccumTranslationS);
+    matAccumZeroS = m4.multiply(scaleMatrix, matAccumZeroS);
+
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+
+    gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, projectionS);
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumZeroS);
+
+    sphere.Draw();
+    gl.clear(gl.DEPTH_BUFFER_BIT);
 
     let matAccum = m4.multiply(rotateToPointZero, modelView);
 
@@ -421,6 +469,43 @@ function CreateSurfaceData() {
     return [vertices, normals, textCoords];
 }
 
+const CreateSphereData = (radius) => {
+    const vertexList = [];
+    const textureList = [];
+    const splines = 20;
+  
+    const maxU = Math.PI;
+    const maxV = 2 * Math.PI;
+    const stepU = maxU / splines;
+    const stepV = maxV / splines;
+  
+    const getU = (u) => u / maxU;
+    const getV = (v) => v / maxV;
+  
+    for (let u = 0; u <= maxU; u += stepU) {
+        for (let v = 0; v <= maxV; v += stepV) {
+            const x = radius * Math.sin(u) * Math.cos(v);
+            const y = radius * Math.sin(u) * Math.sin(v);
+            const z = radius * Math.cos(u);
+
+            vertexList.push(x, y, z);
+            textureList.push(getU(u), getV(v));
+
+            const xNext = radius * Math.sin(u + stepU) * Math.cos(v + stepV);
+            const yNext = radius * Math.sin(u + stepU) * Math.sin(v + stepV);
+            const zNext = radius * Math.cos(u + stepU);
+
+            vertexList.push(xNext, yNext, zNext);
+            textureList.push(getU(u + stepU), getV(v + stepV));
+        }
+    }
+  
+    return {
+        verticesSphere: vertexList,
+        texturesSphere: textureList,
+    };
+};
+
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
@@ -435,14 +520,20 @@ function initGL() {
     shProgram.iProjectionMatrix = gl.getUniformLocation(prog, "ProjectionMatrix");
     shProgram.iModelViewMatrix = gl.getUniformLocation(prog, "ModelViewMatrix");
     shProgram.iTexture = gl.getUniformLocation(prog, "u_texture");
+
+    sphere = new Model("Sphere");
+    const { verticesSphere, texturesSphere } = CreateSphereData(5);
+    sphere.BufferData(verticesSphere, texturesSphere);
+
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData()[0], CreateSurfaceData()[2]);
+
     surface2 = new Model('Surface2');
     surface2.BufferData(
         [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0],
-        // [0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0],
         [1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0])
 
+    loadSphereTexture();
     gl.enable(gl.DEPTH_TEST);
 }
 
@@ -504,6 +595,7 @@ function init() {
         }
     }
     catch (e) {
+        console.log(e);
         document.getElementById("canvas-holder").innerHTML =
             "<p>Sorry, could not get a WebGL graphics context.</p>";
         return;
@@ -517,6 +609,14 @@ function init() {
         return;
     }
 
+    const xPositionInput = document.getElementById("xPosition");
+    const yPositionInput = document.getElementById("yPosition");
+    const zPositionInput = document.getElementById("zPosition"); 
+
+    xPositionInput.addEventListener("input", draw);
+    yPositionInput.addEventListener("input", draw);
+    zPositionInput.addEventListener("input", draw);
+
     spaceball = new TrackballRotator(canvas, draw, 0);
 
     if ("DeviceOrientationEvent" in window) {
@@ -524,6 +624,50 @@ function init() {
     } else {
         console.log("Device orientation not supported");
     }
+
+    audio = document.getElementById("audio");
+
+    audio.addEventListener("pause", () => {
+        audioContext.resume();
+    });
+
+    audio.addEventListener("play", () => {
+        if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioSource = audioContext.createMediaElementSource(audio);
+        audioPanner = audioContext.createPanner();
+        audioFilter = audioContext.createBiquadFilter();
+
+        var from = 300;
+        var to = 30000;
+        var geometricMean = Math.sqrt(from * to);
+
+        audioPanner.panningModel = "HRTF";
+        audioPanner.distanceModel = "linear";
+        audioFilter.type = "bandpass";
+        audioFilter.frequency.value = geometricMean;
+        audioFilter.Q.value = geometricMean / (to - from);
+
+        audioSource.connect(audioPanner);
+        audioPanner.connect(audioFilter);
+        audioFilter.connect(audioContext.destination);
+
+        audioContext.resume();
+        }
+    });
+
+    let filterOn = document.getElementById("filterCheckbox");
+
+    filterOn.addEventListener("change", function () {
+        if (filterOn.checked) {
+        audioPanner.disconnect();
+        audioPanner.connect(audioFilter);
+        audioFilter.connect(audioContext.destination);
+        } else {
+        audioPanner.disconnect();
+        audioPanner.connect(audioContext.destination);
+        }
+    });
 
     draw2();
     LoadTexture();
@@ -550,6 +694,22 @@ function LoadTexture() {
         draw();
     });
 }
+
+const loadSphereTexture = () => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.src = "https://www.manytextures.com/download/18/texture/jpg/256/stone-wall-256x256.jpg";
+    //image.src = "https://pbs.twimg.com/media/EX0xFnMXkAIXcS-.jpg";
+    image.addEventListener("load", () => {
+        sphereTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, sphereTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    
+        console.log("Sphere texture is loaded!")
+    });
+};
 
 const handleOrientation = (event) => {
     orientationEvent.alpha = event.alpha;

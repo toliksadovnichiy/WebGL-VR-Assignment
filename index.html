@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-    <title>PA#2</title>
+    <title>CGW</title>
     <style>
         p, h2, span, input {
             font-family: Arial, Helvetica, sans-serif;
@@ -49,10 +49,9 @@
 
 <body onload="init()">
 
-    <h2>A Surface of Revolution “Wellenkugel” with "Trackball" Mouse Rotation</h2>
+    <h2>Calculation & graphics work, Variant 24</h2>
+    <h2>A Surface of Revolution “Wellenkugel”</h2>
 
-    <p id="message">Drag your mouse on the cube to rotate it.<br>
-        (On a touch screen, you can use your finger.)</p>
     <span>Eye Separation</span>
     <input type="range" value="70" min="2" max="200" step="2" id="id1" />
     <span class="s">0</span><br>
@@ -65,6 +64,40 @@
     <span>Convergence</span>
     <input type="range" value="2500" min="100" max="5000" step="100" id="id4" />
     <span class="s">0</span><br>
+
+    <div style="font-weight: bold; margin-top: 15px; margin-bottom: 15px">
+      Set filter params
+    </div>
+
+    <div>
+      <label for="filterCheckbox">Filter On</label>
+      <input type="checkbox" id="filterCheckbox" name="filterCheckbox" checked/>
+    </div>
+
+
+    <div style="font-weight: bold; margin-top: 15px; margin-bottom: 15px">
+      Set audio coordinats:
+    </div>
+
+    <div>
+      <label for="xPos">X</label>
+      <input type="range" id="xPosition" name="xPosition" min="-35" max="35" step="0.01" value="0"/>
+    </div>
+
+    <div>
+      <label for="yPos">Y</label>
+      <input type="range" id="yPosition" name="yPosition" min="-35" max="35" step="0.01" value="0"/>
+    </div>
+
+    <div>
+      <label for="zPos">Z</label>
+      <input type="range" id="zPosition" name="zPosition" min="-1" max="1" step="0.01" value="0"/>
+    </div>
+
+    <audio id="audio" style="margin-top: 15px; margin-bottom: 15px"  controls loop>
+      <source src="./audio.mp3" type="audio/mpeg" />	  
+      Audio is not supported by browser.	  
+    </audio>	
 
     <div id="canvas-holder">
         <canvas width="700" height="700" id="webglcanvas" style="background-color:black"></canvas>
