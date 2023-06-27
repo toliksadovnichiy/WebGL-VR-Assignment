@@ -243,9 +243,9 @@ function draw() {
 
     gl.bindTexture(gl.TEXTURE_2D, sphereTex);
 
-    xPos = parseFloat(document.getElementById("xPosition").value);
-    yPos = parseFloat(document.getElementById("yPosition").value);
-    zPos = parseFloat(document.getElementById("zPosition").value);
+    xPos = parseFloat(document.getElementById("xPos").value);
+    yPos = parseFloat(document.getElementById("yPos").value);
+    zPos = parseFloat(document.getElementById("zPos").value);
 
     if (
         orientationEvent.alpha &&
@@ -609,13 +609,13 @@ function init() {
         return;
     }
 
-    const xPositionInput = document.getElementById("xPosition");
-    const yPositionInput = document.getElementById("yPosition");
-    const zPositionInput = document.getElementById("zPosition"); 
+    const xPosInput = document.getElementById("xPos");
+    const yPosInput = document.getElementById("yPos");
+    const zPosInput = document.getElementById("zPos"); 
 
-    xPositionInput.addEventListener("input", draw);
-    yPositionInput.addEventListener("input", draw);
-    zPositionInput.addEventListener("input", draw);
+    xPosInput.addEventListener("input", draw);
+    yPosInput.addEventListener("input", draw);
+    zPosInput.addEventListener("input", draw);
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
@@ -699,7 +699,6 @@ const loadSphereTexture = () => {
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.src = "https://www.manytextures.com/download/18/texture/jpg/256/stone-wall-256x256.jpg";
-    //image.src = "https://pbs.twimg.com/media/EX0xFnMXkAIXcS-.jpg";
     image.addEventListener("load", () => {
         sphereTex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, sphereTex);
